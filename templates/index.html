@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Thomas Stevens'ın Dünya Turu Haritası</title>
+
+  <!-- Bootstrap & Font -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      background-image: url("/static/images/backgrnd.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .navbar {
+      background-color: rgba(43, 25, 0, 0.75);
+    }
+
+    #map {
+      height: 70vh;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+      border: 3px solid #dabc9a;
+    }
+
+    h1 {
+      color: #4d2c01;
+      font-family: 'Tangerine', cursive;
+      font-size: 72px;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+
+    .leaflet-control-zoom a {
+      background-color: #dabc9a !important;
+      color: #4d2c01 !important;
+      border: none !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background-color: #c3a882 !important;
+      color: #4d2c01 !important;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background-color: #dabc9a;
+      color: #4d2c01;
+      font-family: 'Tangerine', cursive;
+      font-size: 1.6rem;
+    }
+
+    .leaflet-popup-tip {
+      background-color: #dabc9a;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 🧭 Navbar -->
+<nav class="navbar navbar-expand-sm">
+  <div class="container-fluid d-flex align-items-center">
+    <a class="navbar-brand d-flex align-items-center" href="/" style="color: #dabc9a; text-decoration: none;">
+      <div style="width: 70px; height: 70px; overflow: hidden; border-radius: 50%;">
+        <img src="/static/images/Logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+      <span style="font-family: 'Tangerine', cursive; font-size: 40px; margin-left: 12px;">
+        Thomas Stevens'ın Dünya Turu
+      </span>
+    </a>
+
+    <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation" style="border-color: #dabc9a;">
+      <span class="navbar-toggler-icon" style="filter: invert(91%) sepia(19%) saturate(327%) hue-rotate(338deg) brightness(94%) contrast(90%);"></span>
+    </button>
+
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="btn btn-outline-light ms-3"
+             href="/login"
+             style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
+            Admin Girişi
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- 🗺 Harita -->
+<div class="container mt-4">
+  <h1 class="mb-4 text-center">Thomas Stevens’ın Dünya Turu Haritası</h1>
+  <div id="map"></div>
+</div>
+
+<!-- 🧩 Leaflet Harita Scripti -->
+<script>
+  const places = {{ places | tojson }};
+
+  // Varsayılan merkez
+  const defaultCenter = [41.0082, 28.9784];
+  const map = L.map('map').setView(defaultCenter, 3);
+
+  // Harita katmanı (bejin tonlu)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>'
+  }).addTo(map);
+
+  // Marker ekleme
+  places.forEach(place => {
+    const iconColor = place.is_in_ottoman ? '#4d2c01' : '#a84a32';
+
+    // ✅ SVG'yi string template olarak düzeltildi
+    const customIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 24 24"
+             fill="${iconColor}" stroke="#dabc9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5"/>
+        </svg>`,
+      iconSize: [28, 42],
+      iconAnchor: [14, 42],
+      popupAnchor: [0, -40]
+    });
+
+    const marker = L.marker([place.latitude, place.longitude], { icon: customIcon }).addTo(map);
+
+    const popupContent = `
+      <div>
+        <h5>${place.name_modern} (${place.name_historic})</h5>
+        <p>${place.description_tr || ""}</p>
+        <p><b>Osmanlı Toprağı:</b> ${place.is_in_ottoman ? "Evet" : "Hayır"}</p>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent);
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Paneli - Stevens Dünya Turu</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-image: url("/static/images/backgrnd.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 80px; /* navbar yüksekliği */
+        }
+
+        .navbar {
+            background-color: rgba(43, 25, 0, 0.85) !important;
+        }
+
+        .navbar-brand, .nav-link {
+            
+            color: #dabc9a !important;
+            font-weight: 500;
+            font-size: 20px;
+
+        }
+
+        .container-box {
+            background-color: rgba(43, 25, 0, 0.85);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.5);
+            color: #dabc9a;
+            margin-bottom: 50px;
+        }
+
+        h2 {
+     
+            font-size: 40px;
+            margin-bottom: 1.5rem;
+            color: #dabc9a;
+        }
+
+        .form-label {
+            color: #f5e6c4;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            border: none;
+            padding: 10px;
+            background-color: rgba(255,255,255,0.9);
+        }
+
+        .btn-success {
+            background-color: #dabc9a;
+            border-color: #dabc9a;
+            color: #2b1900;
+            font-weight: 600;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .btn-success:hover {
+            background-color: #e8cda8;
+        }
+
+        table.table {
+            background-color: rgba(0,0,0,0.3);
+            color: #fff;
+        }
+
+        table.table thead.table-dark th {
+            background-color: rgba(43,25,0,0.95);
+            color: #dabc9a;
+        }
+
+        .btn-primary, .btn-danger {
+            border-radius: 15px;
+        }
+
+        .btn-primary {
+            background-color: #dabc9a;
+            color: #2b1900;
+            border-color: #dabc9a;
+        }
+
+        .btn-primary:hover {
+            background-color: #e8cda8;
+            color: #2b1900;
+        }
+
+        .btn-danger {
+            background-color: #c94c4c;
+            color: #fff;
+            border-color: #c94c4c;
+        }
+
+        .btn-danger:hover {
+            background-color: #d35b5b;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">Admin</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+          aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link btn btn-outline-light ms-2" href="/logout">Çıkış Yap</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container container-box mt-4">
+
+    <h2>Yeni Yer Ekle</h2>
+    <form method="post" action="/admin/add" class="row g-3 mb-5">
+        <div class="col-md-6">
+            <label class="form-label">Tarihi Ad</label>
+            <input type="text" name="name_historic" class="form-control" required>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Modern Ad</label>
+            <input type="text" name="name_modern" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Enlem</label>
+            <input type="number" step="any" name="latitude" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Boylam</label>
+            <input type="number" step="any" name="longitude" class="form-control" required>
+        </div>
+        <div class="col-md-4 d-flex align-items-center">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="is_in_ottoman" id="ottomanCheck">
+                <label class="form-check-label" for="ottomanCheck">Osmanlı Toprağı mı?</label>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Açıklama (TR)</label>
+            <textarea name="description_tr" class="form-control"></textarea>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Açıklama (EN)</label>
+            <textarea name="description_en" class="form-control"></textarea>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-success">Ekle</button>
+        </div>
+    </form>
+
+    <hr class="my-5">
+
+    <h2>Mevcut Yerler</h2>
+    <table class="table table-striped table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Tarihi Ad</th>
+                <th>Modern Ad</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for place in places %}
+            <tr>
+                <td>{{ place.id }}</td>
+                <td>{{ place.name_historic }}</td>
+                <td>{{ place.name_modern }}</td>
+                <td>
+                    <a class="btn btn-primary btn-sm me-2" href="/admin/edit/{{ place.id }}">Düzenle</a>
+                    <a class="btn btn-danger btn-sm" href="/admin/delete/{{ place.id }}">Sil</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
