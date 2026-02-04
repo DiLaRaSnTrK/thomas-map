@@ -133,47 +133,147 @@ async def add_place(
         await session.commit()
     return RedirectResponse(url="/admin", status_code=303)
 
+# app.py dosyasına eklenecek yeni rotalar
+
+@app.get("/admin/delete/{place_id}")
+async def delete_place(place_id: int, user: str = Depends(check_login)):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+        if place:
+            await session.delete(place)
+            await session.commit()
+    return RedirectResponse(url="/admin", status_code=303)
+
+@app.get("/admin/edit/{place_id}", response_class=HTMLResponse)
+async def edit_page(request: Request, place_id: int, user: str = Depends(check_login)):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+    return templates.TemplateResponse("edit.html", {"request": request, "place": place})
+
+@app.post("/admin/edit/{place_id}")
+async def edit_place(
+    place_id: int,
+    name_historic: str = Form(...),
+    name_modern: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    is_in_ottoman: bool = Form(False),
+    description_tr: str = Form(""),
+    description_en: str = Form(""),
+    user: str = Depends(check_login)
+):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+        if place:
+            place.name_historic = name_historic
+            place.name_modern = name_modern
+            place.latitude = latitude
+            place.longitude = longitude
+            place.is_in_ottoman = is_in_ottoman
+            place.description_tr = description_tr
+            place.description_en = description_en
+            await session.commit()
+    return RedirectResponse(url="/admin", status_code=303)
 
 # ---------------- Excel'den Veri Yükleme ----------------
+# --- app.py içindeki load_excel fonksiyonunu bu şekilde güncelleyin ---
+# app.py içindeki ilgili kısımları bu şekilde güncelleyin
+
 @app.get("/load_excel")
 async def load_excel():
-    """
-    data klasöründeki Excel dosyasını okuyup veritabanına ekler.
-    Beklenen sütun adları:
-    no | lokasyon | tarih | kullanılan araç | bilgi | latitude | longitude | osmanlı toprağı olan yerler
-    """
     excel_path = Path("data/123.xlsx")
-
     if not excel_path.exists():
-        return JSONResponse({"error": f"{excel_path} bulunamadı!"}, status_code=404)
+        return JSONResponse({"error": "Excel dosyası 'data/123.xlsx' bulunamadı!"}, status_code=404)
 
-    # Excel oku
+    # Excel'i oku
     df = pd.read_excel(excel_path)
-    df.columns = df.columns.str.strip().str.lower()
+    
+    # SÜTUN BULMA MANTIĞI: İsimleri temizle ve küçük harfe çevir
+    # Türkçe karakter karmaşasını önlemek için 'ı' -> 'i' dönüşümü yapıyoruz
+    df.columns = [str(c).strip().lower().replace('ı', 'i').replace('i̇', 'i') for c in df.columns]
 
-    if "enlem" not in df.columns or "boylam" not in df.columns:
-        return JSONResponse({"error": "Excel dosyasında 'latitude' veya 'longitude' sütunu bulunamadı."}, status_code=400)
-
-    added = 0
     async with SessionLocal() as session:
+        # 1. ÖNCE ESKİ VERİLERİ SİL (Hatalı kayıtlar temizlensin)
+        from sqlalchemy import delete
+        await session.execute(delete(Place))
+        await session.commit()
+
+        added = 0
         for _, row in df.iterrows():
             try:
-                if pd.isna(row["enlem"]) or pd.isna(row["boylam"]):
-                    continue
+                # Dinamik Sütun Yakalama
+                # 'enlem' veya 'latitude' içeren sütunu bul
+                lat_col = next((c for c in df.columns if 'enlem' in c or 'lat' in c), None)
+                lon_col = next((c for c in df.columns if 'boylam' in c or 'lon' in c), None)
+                
+                if not lat_col or pd.isna(row[lat_col]): continue
+
+                # OSMANLI SÜTUNUNU BUL (İçinde 'osman' geçen herhangi bir sütun)
+                osman_col = next((c for c in df.columns if 'osman' in c), None)
+                is_ottoman_val = False
+                if osman_col:
+                    val = str(row[osman_col]).strip().lower()
+                    is_ottoman_val = val in ["evet", "true", "1", "yes"]
 
                 place = Place(
-                    name_historic=str(row.get("tarih", "")),
-                    name_modern=str(row.get("lokasyon", "")),
-                    latitude=float(row["enlem"]),
-                    longitude=float(row["boylam"]),
-                    is_in_ottoman=str(row.get("osmanlı toprağı olan yerler", "")).strip().lower() in ["evet", "true", "1"],
-                    description_tr=str(row.get("bilgi", ""))
+                    name_historic=str(row.get(next((c for c in df.columns if 'tarih' in c), "tarih"), "")),
+                    name_modern=str(row.get(next((c for c in df.columns if 'lokasyon' in c), "lokasyon"), "")),
+                    latitude=float(row[lat_col]),
+                    longitude=float(row[lon_col]),
+                    is_in_ottoman=is_ottoman_val,
+                    description_tr=str(row.get(next((c for c in df.columns if 'bilgi' in c), "bilgi"), ""))
                 )
                 session.add(place)
                 added += 1
-            except Exception:
+            except Exception as e:
+                print(f"Satır atlandı: {e}")
                 continue
 
         await session.commit()
 
-    return JSONResponse({"message": f"{added} kayıt başarıyla eklendi."})
+    return JSONResponse({"message": f"Eski veriler temizlendi ve {added} yeni kayıt başarıyla eklendi."})
+
+# DÜZENLEME VE SİLME ROTALARI (Admin paneli butonları için)
+@app.get("/admin/delete/{place_id}")
+async def delete_place(place_id: int, user: str = Depends(check_login)):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+        if place:
+            await session.delete(place)
+            await session.commit()
+    return RedirectResponse(url="/admin", status_code=303)
+
+@app.get("/admin/edit/{place_id}", response_class=HTMLResponse)
+async def edit_page(request: Request, place_id: int, user: str = Depends(check_login)):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+    return templates.TemplateResponse("edit.html", {"request": request, "place": place})
+
+@app.post("/admin/edit/{place_id}")
+async def edit_save(place_id: int, name_historic: str = Form(...), name_modern: str = Form(...), 
+                    latitude: float = Form(...), longitude: float = Form(...), 
+                    is_in_ottoman: bool = Form(False), description_tr: str = Form(""), 
+                    user: str = Depends(check_login)):
+    async with SessionLocal() as session:
+        query = select(Place).where(Place.id == place_id)
+        result = await session.execute(query)
+        place = result.scalar_one_or_none()
+        if place:
+            place.name_historic = name_historic
+            place.name_modern = name_modern
+            place.latitude = latitude
+            place.longitude = longitude
+            place.is_in_ottoman = is_in_ottoman
+            place.description_tr = description_tr
+            await session.commit()
+    return RedirectResponse(url="/admin", status_code=303)
