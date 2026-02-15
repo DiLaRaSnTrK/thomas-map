@@ -13,20 +13,11 @@
             background-repeat: no-repeat;
             min-height: 100vh;
             margin: 0;
-            padding-top: 80px; /* navbar yüksekliği */
+            padding-top: 80px;
         }
 
-        .navbar {
-            background-color: rgba(43, 25, 0, 0.85) !important;
-        }
-
-        .navbar-brand, .nav-link {
-            
-            color: #dabc9a !important;
-            font-weight: 500;
-            font-size: 20px;
-
-        }
+        .navbar { background-color: rgba(43, 25, 0, 0.85) !important; }
+        .navbar-brand, .nav-link { color: #dabc9a !important; font-size: 20px; }
 
         .container-box {
             background-color: rgba(43, 25, 0, 0.85);
@@ -37,83 +28,26 @@
             margin-bottom: 50px;
         }
 
-        h2 {
-     
-            font-size: 40px;
-            margin-bottom: 1.5rem;
-            color: #dabc9a;
-        }
+        h2 { font-family: 'Tangerine', cursive; font-size: 45px; color: #dabc9a; margin-bottom: 1.5rem; }
+        .form-label { color: #f5e6c4; font-weight: 500; }
+        .form-control, .form-select { border-radius: 10px; background-color: rgba(255,255,255,0.9); }
 
-        .form-label {
-            color: #f5e6c4;
-        }
-
-        .form-control {
-            border-radius: 10px;
-            border: none;
-            padding: 10px;
-            background-color: rgba(255,255,255,0.9);
-        }
-
-        .btn-success {
-            background-color: #dabc9a;
-            border-color: #dabc9a;
-            color: #2b1900;
-            font-weight: 600;
-            border-radius: 20px;
-            transition: 0.3s;
-        }
-
-        .btn-success:hover {
-            background-color: #e8cda8;
-        }
-
-        table.table {
-            background-color: rgba(0,0,0,0.3);
-            color: #fff;
-        }
-
-        table.table thead.table-dark th {
-            background-color: rgba(43,25,0,0.95);
-            color: #dabc9a;
-        }
-
-        .btn-primary, .btn-danger {
-            border-radius: 15px;
-        }
-
-        .btn-primary {
-            background-color: #dabc9a;
-            color: #2b1900;
-            border-color: #dabc9a;
-        }
-
-        .btn-primary:hover {
-            background-color: #e8cda8;
-            color: #2b1900;
-        }
-
-        .btn-danger {
-            background-color: #c94c4c;
-            color: #fff;
-            border-color: #c94c4c;
-        }
-
-        .btn-danger:hover {
-            background-color: #d35b5b;
-        }
+        .btn-success { background-color: #dabc9a; color: #2b1900; font-weight: 600; border-radius: 20px; border: none; }
+        .btn-success:hover { background-color: #e8cda8; }
+        .btn-info { background-color: #5bc0de; border-radius: 15px; color: white; border: none; }
+        
+        table.table { background-color: rgba(0,0,0,0.3); color: #fff; }
+        table.table thead.table-dark th { background-color: rgba(43,25,0,0.95); color: #dabc9a; }
+        .btn-primary { background-color: #dabc9a; color: #2b1900; border: none; border-radius: 15px; }
+        .btn-danger { background-color: #c94c4c; border-radius: 15px; border: none; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">Admin</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-          aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <a class="navbar-brand" href="/">Thomas Stevens Admin</a>
+        <div class="collapse navbar-collapse justify-content-end">
             <ul class="navbar-nav">
                 <li class="nav-item">
                     <a class="nav-link btn btn-outline-light ms-2" href="/logout">Çıkış Yap</a>
@@ -124,53 +58,65 @@
 </nav>
 
 <div class="container container-box mt-4">
-
     <h2>Yeni Yer Ekle</h2>
     <form method="post" action="/admin/add" class="row g-3 mb-5">
         <div class="col-md-6">
-            <label class="form-label">Tarihi Ad</label>
-            <input type="text" name="name_historic" class="form-control" required>
+            <label class="form-label">Konum Adı</label>
+            <input type="text" name="name_modern" class="form-control" placeholder="Örn: İstanbul" required>
         </div>
         <div class="col-md-6">
-            <label class="form-label">Modern Ad</label>
-            <input type="text" name="name_modern" class="form-control" required>
+            <label class="form-label">Seyahat Tarihi</label>
+            <input type="text" name="name_historic" class="form-control" placeholder="Örn: 02.07.1885" required>
         </div>
+        
         <div class="col-md-4">
-            <label class="form-label">Enlem</label>
+            <label class="form-label">Enlem (Latitude)</label>
             <input type="number" step="any" name="latitude" class="form-control" required>
         </div>
         <div class="col-md-4">
-            <label class="form-label">Boylam</label>
+            <label class="form-label">Boylam (Longitude)</label>
             <input type="number" step="any" name="longitude" class="form-control" required>
         </div>
-        <div class="col-md-4 d-flex align-items-center">
+        <div class="col-md-4 d-flex align-items-center mt-4">
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="is_in_ottoman" id="ottomanCheck">
                 <label class="form-check-label" for="ottomanCheck">Osmanlı Toprağı mı?</label>
             </div>
         </div>
+
         <div class="col-md-6">
             <label class="form-label">Açıklama (TR)</label>
-            <textarea name="description_tr" class="form-control"></textarea>
+            <textarea id="desc_tr" name="description_tr" class="form-control" rows="4"></textarea>
+            <button type="button" onclick="autoTranslate()" class="btn btn-sm btn-info mt-2">İngilizceye Çevir ✨</button>
         </div>
         <div class="col-md-6">
             <label class="form-label">Açıklama (EN)</label>
-            <textarea name="description_en" class="form-control"></textarea>
+            <textarea id="desc_en" name="description_en" class="form-control" rows="4"></textarea>
         </div>
-        <div class="col-12">
-            <button type="submit" class="btn btn-success">Ekle</button>
+
+        <div class="col-md-6">
+            <label class="form-label">Görsel Seçimi</label>
+            <select name="image_url" class="form-select">
+                <option value="vintage.png">Varsayılan (Vintage)</option>
+                <option value="9.png">Görsel 9</option>
+                <option value="brown.png">Kahverengi Kağıt</option>
+            </select>
+        </div>
+
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-success px-5">Ekle</button>
         </div>
     </form>
 
-    <hr class="my-5">
+    <hr class="my-5" style="border-color: #dabc9a;">
 
     <h2>Mevcut Yerler</h2>
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover mt-3">
         <thead class="table-dark">
             <tr>
                 <th>ID</th>
-                <th>Tarihi Ad</th>
-                <th>Modern Ad</th>
+                <th>Konum Adı</th>
+                <th>Seyahat Tarihi</th>
                 <th>İşlemler</th>
             </tr>
         </thead>
@@ -178,8 +124,8 @@
             {% for place in places %}
             <tr>
                 <td>{{ place.id }}</td>
-                <td>{{ place.name_historic }}</td>
                 <td>{{ place.name_modern }}</td>
+                <td>{{ place.name_historic }}</td>
                 <td>
                     <a class="btn btn-primary btn-sm me-2" href="/admin/edit/{{ place.id }}">Düzenle</a>
                     <a class="btn btn-danger btn-sm" href="/admin/delete/{{ place.id }}">Sil</a>
@@ -188,8 +134,27 @@
             {% endfor %}
         </tbody>
     </table>
-
 </div>
+
+<script>
+async function autoTranslate() {
+    const text = document.getElementById('desc_tr').value;
+    if(!text) { alert("Lütfen önce Türkçe açıklamayı girin!"); return; }
+
+    const response = await fetch('/admin/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text})
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        document.getElementById('desc_en').value = data.translated_text;
+    } else {
+        alert("Çeviri sırasında bir hata oluştu.");
+    }
+}
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

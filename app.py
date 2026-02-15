@@ -10,6 +10,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import pandas as pd
 import os
+from deep_translator import GoogleTranslator
+from sqlalchemy import delete
+
 
 # Ortam değişkenlerini yükle
 load_dotenv()
@@ -41,7 +44,7 @@ async def shutdown():
 # ---------------- Ana Sayfa ----------------
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    query = select(Place)
+    query = select(Place).order_by(Place.id)
     async with SessionLocal() as session:
         result = await session.execute(query)
         places = result.scalars().all()
@@ -187,57 +190,89 @@ async def edit_place(
 
 @app.get("/load_excel")
 async def load_excel():
+    # 1. Dosya Kontrolü
+    # Not: Excel dosyanızın adı tam olarak '123.xlsx' olmalı ve 'data' klasöründe bulunmalıdır.
     excel_path = Path("data/123.xlsx")
     if not excel_path.exists():
-        return JSONResponse({"error": "Excel dosyası 'data/123.xlsx' bulunamadı!"}, status_code=404)
+        return JSONResponse({"error": f"Excel dosyası '{excel_path}' bulunamadı!"}, status_code=404)
 
-    # Excel'i oku
+    # 2. Excel'i Oku ve Sütunları Standartlaştır
     df = pd.read_excel(excel_path)
     
-    # SÜTUN BULMA MANTIĞI: İsimleri temizle ve küçük harfe çevir
-    # Türkçe karakter karmaşasını önlemek için 'ı' -> 'i' dönüşümü yapıyoruz
+    # Türkçe karakter ve boşluk sorunlarını çözmek için sütun isimlerini temizliyoruz
+    original_cols = df.columns.tolist()
     df.columns = [str(c).strip().lower().replace('ı', 'i').replace('i̇', 'i') for c in df.columns]
 
+    # 3. Çeviri Motorunu Başlat (Türkçe -> İngilizce)
+    translator = GoogleTranslator(source='tr', target='en')
+
     async with SessionLocal() as session:
-        # 1. ÖNCE ESKİ VERİLERİ SİL (Hatalı kayıtlar temizlensin)
-        from sqlalchemy import delete
+        # 4. Önce Mevcut Verileri Temizle (Sıfırdan temiz bir yükleme için)
         await session.execute(delete(Place))
         await session.commit()
 
         added = 0
-        for _, row in df.iterrows():
+        # Excel'deki 'NO' sütunu varsa ona göre, yoksa satır sırasına göre yükleme yapar
+        # Bu, haritadaki çizgilerin (polyline) doğru sırayla çizilmesini sağlar.
+        for index, row in df.iterrows():
             try:
-                # Dinamik Sütun Yakalama
-                # 'enlem' veya 'latitude' içeren sütunu bul
+                # --- Dinamik Sütun Yakalama ---
+                # Sütun isimleri değişse bile anahtar kelimelerden doğru veriyi bulur
                 lat_col = next((c for c in df.columns if 'enlem' in c or 'lat' in c), None)
                 lon_col = next((c for c in df.columns if 'boylam' in c or 'lon' in c), None)
-                
-                if not lat_col or pd.isna(row[lat_col]): continue
-
-                # OSMANLI SÜTUNUNU BUL (İçinde 'osman' geçen herhangi bir sütun)
                 osman_col = next((c for c in df.columns if 'osman' in c), None)
+                hist_col = next((c for c in df.columns if 'tarih' in c), None)
+                mod_col = next((c for c in df.columns if 'lokasyon' in c or 'modern' in c), None)
+                info_col = next((c for c in df.columns if 'bilgi' in c or 'desc' in c), None)
+
+                # Koordinat yoksa bu satırı atla
+                if not lat_col or not lon_col or pd.isna(row[lat_col]):
+                    continue
+
+                # --- Osmanlı Toprağı Kontrolü ---
                 is_ottoman_val = False
                 if osman_col:
                     val = str(row[osman_col]).strip().lower()
+                    # 'Evet', 'True', '1' veya 'Yes' değerlerini yakalar
                     is_ottoman_val = val in ["evet", "true", "1", "yes"]
 
+                # --- Otomatik Çeviri İşlemi ---
+                desc_tr = str(row.get(info_col, "")) if info_col else ""
+                desc_en = ""
+                
+                if desc_tr and desc_tr != "nan" and desc_tr.strip() != "":
+                    try:
+                        # Bilgi metnini otomatik olarak İngilizceye çevirir
+                        desc_en = translator.translate(desc_tr)
+                    except Exception as e:
+                        print(f"Çeviri hatası (Satır {index}): {e}")
+                        desc_en = "" # Hata olursa boş bırakır
+
+                # 5. Veritabanı Nesnesini Oluştur
                 place = Place(
-                    name_historic=str(row.get(next((c for c in df.columns if 'tarih' in c), "tarih"), "")),
-                    name_modern=str(row.get(next((c for c in df.columns if 'lokasyon' in c), "lokasyon"), "")),
+                    name_historic=str(row.get(hist_col, "")) if hist_col else "",
+                    name_modern=str(row.get(mod_col, "")) if mod_col else "",
                     latitude=float(row[lat_col]),
                     longitude=float(row[lon_col]),
                     is_in_ottoman=is_ottoman_val,
-                    description_tr=str(row.get(next((c for c in df.columns if 'bilgi' in c), "bilgi"), ""))
+                    description_tr=desc_tr,
+                    description_en=desc_en  # Otomatik doldurulan İngilizce alan
                 )
+                
                 session.add(place)
                 added += 1
+
             except Exception as e:
-                print(f"Satır atlandı: {e}")
+                print(f"Satır {index} işlenirken hata oluştu: {e}")
                 continue
 
+        # 6. Tüm Değişiklikleri Kaydet
         await session.commit()
 
-    return JSONResponse({"message": f"Eski veriler temizlendi ve {added} yeni kayıt başarıyla eklendi."})
+    return JSONResponse({
+        "status": "success",
+        "message": f"Eski veriler temizlendi. {added} yeni kayıt otomatik çevirileriyle birlikte eklendi."
+    })
 
 # DÜZENLEME VE SİLME ROTALARI (Admin paneli butonları için)
 @app.get("/admin/delete/{place_id}")

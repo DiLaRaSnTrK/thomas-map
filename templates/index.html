@@ -4,11 +4,9 @@
   <meta charset="UTF-8">
   <title>Thomas Stevens'ın Dünya Turu Haritası</title>
 
-  <!-- Bootstrap & Font -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap" rel="stylesheet">
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -20,11 +18,10 @@
       background-repeat: no-repeat;
       height: 100vh;
       margin: 0;
+      overflow-x: hidden;
     }
 
-    .navbar {
-      background-color: rgba(43, 25, 0, 0.75);
-    }
+    .navbar { background-color: rgba(43, 25, 0, 0.75); }
 
     #map {
       height: 70vh;
@@ -36,79 +33,70 @@
     h1 {
       color: #4d2c01;
       font-family: 'Tangerine', cursive;
-      font-size: 72px;
+      font-size: 60px;
       text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
 
-    .leaflet-control-zoom a {
-      background-color: #dabc9a !important;
-      color: #4d2c01 !important;
-      border: none !important;
+    #detail-panel {
+      height: 70vh;
+      overflow-y: auto;
+      background: rgba(253, 245, 230, 0.98);
+      border-radius: 15px;
+      border: 3px solid #dabc9a;
+      box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+      padding: 25px;
+      display: none;
     }
 
-    .leaflet-control-zoom a:hover {
-      background-color: #c3a882 !important;
-      color: #4d2c01 !important;
+    .detail-title {
+      font-family: 'Tangerine', cursive;
+      font-size: 3.5rem;
+      color: #4d2c01;
+      border-bottom: 2px double #dabc9a;
+      margin-bottom: 15px;
     }
 
-    /* Popup çerçeve tasarımı */
-    .leaflet-popup-content-wrapper {
-        background: #fdf5e6; /* Eskitme kağıt rengi */
-        color: #4d2c01;
-        border: 2px solid #dabc9a;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        padding: 5px;
+    .detail-text {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      font-size: 1.05rem;
+      color: #333;
+      line-height: 1.6;
+      text-align: justify;
     }
 
-    /* Popup başlık stili */
-    .popup-title {
-        font-family: 'Tangerine', cursive;
-        font-size: 2.4rem;
-        font-weight: bold;
-        margin: 0;
-        line-height: 1;
-        border-bottom: 1px double #dabc9a;
-        padding-bottom: 5px;
-        color: #4d2c01;
+    .slider-placeholder {
+      width: 100%;
+      height: 250px;
+      background-color: #eee;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #dabc9a;
+      overflow: hidden;
     }
 
-    /* Popup içerik metni stili */
-    .popup-text {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Türkçe karakterler için güvenli modern font */
-        font-size: 0.95rem;
-        margin-top: 10px;
-        color: #5d4037;
-        line-height: 1.4;
-    }
-
-    /* Osmanlı statüsü etiketi */
+    .slider-img { width: 100%; height: 100%; object-fit: cover; }
+    .transition-all { transition: all 0.4s ease-in-out; }
     .status-badge {
-        display: inline-block;
-        margin-top: 8px;
-        padding: 2px 8px;
-        background: #dabc9a;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        font-weight: bold;
+      display: inline-block;
+      padding: 5px 15px;
+      background: #dabc9a;
+      color: #4d2c01;
+      border-radius: 20px;
+      font-weight: bold;
+      margin-top: 15px;
     }
-
-    .leaflet-popup-tip {
-      background-color: #dabc9a;
-    }
-    
+    .close-btn { cursor: pointer; float: right; font-size: 1.5rem; color: #4d2c01; }
   </style>
 </head>
 <body>
 
-<!-- 🧭 Navbar -->
 <nav class="navbar navbar-expand-sm">
   <div class="container-fluid d-flex align-items-center">
     <a class="navbar-brand d-flex align-items-center" href="/" style="color: #dabc9a; text-decoration: none;">
       <div style="width: 70px; height: 70px; overflow: hidden; border-radius: 50%;">
         <img src="/static/images/Logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
       </div>
-      <span style="font-family: 'Tangerine', cursive; font-size: 40px; margin-left: 12px;">
+      <span id="nav-title" style="font-family: 'Tangerine', cursive; font-size: 40px; margin-left: 12px;">
         Thomas Stevens'ın Dünya Turu
       </span>
     </a>
@@ -122,7 +110,7 @@
           </select>
         </li>
         <li class="nav-item">
-          <a class="btn btn-outline-light btn-sm ms-3" href="/login" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
+          <a id="admin-login-btn" class="btn btn-outline-light btn-sm ms-3" href="/login" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
             Admin Girişi
           </a>
         </li>
@@ -131,9 +119,8 @@
   </div>
 </nav>
 
-<!-- 🗺 Harita -->
-<div class="container mt-4">
-  <h1 class="mb-4 text-center">Thomas Stevens’ın Dünya Turu Haritası</h1>
+<div class="container-fluid mt-4 px-4">
+  <h1 id="main-title" class="mb-4 text-center">Thomas Stevens’ın Dünya Turu Haritası</h1>
   
   <div class="d-flex justify-content-center mb-3">
       <select id="filterOttoman" class="form-select w-auto" style="background-color: #dabc9a; color: #4d2c01; border: none; border-radius: 20px; cursor: pointer;">
@@ -143,77 +130,181 @@
       </select>
   </div>
 
-  <div id="map"></div>
+  <div class="row">
+    <div id="map-col" class="col-12 transition-all">
+      <div id="map"></div>
+    </div>
+    <div id="detail-panel" class="col-md-4 transition-all">
+      <span class="close-btn" onclick="closePanel()">&times;</span>
+      <div id="panel-content"></div>
+    </div>
+  </div>
 </div>
 
-<!-- 🧩 Leaflet Harita Scripti -->
 <script>
   const places = {{ places | tojson }};
   let currentLang = 'tr';
   let markers = [];
+  let routePath = null;
+
+  // Dil Sözlüğü
+  const translations = {
+    tr: {
+      navTitle: "Thomas Stevens'ın Dünya Turu",
+      mainTitle: "Thomas Stevens’ın Dünya Turu Haritası",
+      filterAll: "Tüm Rota",
+      filterOttoman: "Osmanlı Toprakları",
+      filterOther: "Diğer Bölgeler",
+      adminLogin: "Admin Girişi",
+      histName: "Tarihi Ad",
+      ottomanLabel: "Osmanlı Toprağı",
+      yes: "Evet", no: "Hayır"
+    },
+    en: {
+      navTitle: "Thomas Stevens' World Tour",
+      mainTitle: "Thomas Stevens' World Tour Map",
+      filterAll: "Full Route",
+      filterOttoman: "Ottoman Territories",
+      filterOther: "Other Regions",
+      adminLogin: "Admin Login",
+      histName: "Historic Name",
+      ottomanLabel: "Ottoman Land",
+      yes: "Yes", no: "No"
+    }
+  };
 
   const map = L.map('map').setView([41.0082, 28.9784], 3);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
 
-  function renderMarkers() {
+  function updateStaticTexts() {
+    const t = translations[currentLang];
+    document.getElementById('nav-title').innerText = t.navTitle;
+    document.getElementById('main-title').innerText = t.mainTitle;
+    document.getElementById('admin-login-btn').innerText = t.adminLogin;
+    
+    const filter = document.getElementById('filterOttoman');
+    filter.options[0].text = t.filterAll;
+    filter.options[1].text = t.filterOttoman;
+    filter.options[2].text = t.filterOther;
+  }
+
+ function renderMarkers() {
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
     const filterValue = document.getElementById('filterOttoman').value;
 
     places.forEach(place => {
-        // Boolean kontrolünü netleştiriyoruz
-        const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
-        
-        if (filterValue === 'yes' && !isOttoman) return;
-        if (filterValue === 'no' && isOttoman) return;
-
-        const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
+      const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
       
+      if (filterValue === 'yes' && !isOttoman) return;
+      if (filterValue === 'no' && isOttoman) return;
+
+      const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
       const customIcon = L.divIcon({
         className: 'custom-marker',
         html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 24 24" fill="${iconColor}" stroke="#dabc9a" stroke-width="2"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
         iconSize: [28, 42],
-        iconAnchor: [14, 42],
-        popupAnchor: [0, -40]
+        iconAnchor: [14, 42]
       });
 
       const marker = L.marker([place.latitude, place.longitude], { icon: customIcon }).addTo(map);
-      
-      // 4. Dil bazlı içerik oluşturma
-      // Dil bazlı değişkenler
-      const title = place.name_modern;
-      const desc = currentLang === 'tr' ? (place.description_tr || "") : (place.description_en || "");
-      const ottomanLabel = currentLang === 'tr' ? 'Osmanlı Toprağı' : 'Ottoman Land';
-      const ottomanValue = currentLang === 'tr' ? (isOttoman ? "Evet" : "Hayır") : (isOttoman ? "Yes" : "No");
-
-      marker.bindPopup(`
-          <div class="custom-popup">
-              <h4 class="popup-title">${title}</h4>
-              <div class="popup-text">
-                  ${desc}
-              </div>
-              <div class="status-badge">
-                  ${ottomanLabel}: ${ottomanValue}
-              </div>
-          </div>
-      `, {
-          maxWidth: 250,
-          className: 'custom-leaflet-popup'
-      });
+      place.marker = marker;
+      // Marker'a tıklama olayı
+      marker.on('click', () => showDetails(place));
       
       markers.push(marker);
     });
   }
 
-  // Dinleyiciler
-  document.getElementById('filterOttoman').addEventListener('change', renderMarkers);
+  function showDetails(place) {
+    const t = translations[currentLang];
+
+    // 1. Önce haritadaki tüm marker'ları standart boyutuna ve rengine döndür
+    places.forEach(p => {
+        if (p.marker) {
+            const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
+            const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
+            
+            p.marker.setIcon(L.divIcon({
+                className: 'custom-marker',
+                html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 24 24" fill="${iconColor}" stroke="#dabc9a" stroke-width="2"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+                iconSize: [28, 42],
+                iconAnchor: [14, 42]
+            }));
+            p.marker.setZIndexOffset(0); // Derinlik önceliğini sıfırla
+        }
+    });
+
+    // 2. Seçilen konumu BÜYÜT ve vurgula
+    if (place.marker) {
+        const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
+        const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
+        
+        place.marker.setIcon(L.divIcon({
+            className: 'custom-marker-active',
+            html: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60" viewBox="0 0 24 24" fill="${iconColor}" stroke="#fedfdf" stroke-width="3"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+            iconSize: [40, 60], // Standart 28x42'den 40x60'a büyütüldü
+            iconAnchor: [20, 60] // Çapa noktasını yeni boyuta göre ortala
+        }));
+        place.marker.setZIndexOffset(1000); // Diğer marker'ların üstünde kalmasını sağla
+    }
+
+    // 3. Sağ Paneli Aç ve İçeriği Doldur
+    document.getElementById('map-col').classList.replace('col-12', 'col-md-8');
+    document.getElementById('detail-panel').style.display = 'block';
+
+    const desc = currentLang === 'tr' ? (place.description_tr || "") : (place.description_en || "");
+    const ottomanStatus = place.is_in_ottoman ? t.yes : t.no;
+
+    document.getElementById('panel-content').innerHTML = `
+      <h2 class="detail-title">${place.name_modern}</h2>
+      <div class="slider-placeholder">
+        <img src="/static/images/vintage.png" class="slider-img" alt="Visual">
+      </div>
+      <div class="detail-text">
+        <p><strong>${t.histName}:</strong> ${place.name_historic}</p>
+        <p>${desc}</p>
+      </div>
+      <div class="status-badge">${t.ottomanLabel}: ${ottomanStatus}</div>
+    `;
+
+    // Harita boyut değişimini Leaflet'e bildir
+    setTimeout(() => { map.invalidateSize(); }, 400);
+  }
+
+  function closePanel() {
+    document.getElementById('map-col').classList.replace('col-md-8', 'col-12');
+    document.getElementById('detail-panel').style.display = 'none';
+
+    // Tüm marker'ları standart boyuta döndür
+    places.forEach(p => {
+        if (p.marker) {
+            const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
+            const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
+            p.marker.setIcon(L.divIcon({
+                className: 'custom-marker',
+                html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 24 24" fill="${iconColor}" stroke="#dabc9a" stroke-width="2"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+                iconSize: [28, 42],
+                iconAnchor: [14, 42]
+            }));
+            p.marker.setZIndexOffset(0);
+        }
+    });
+
+    setTimeout(() => { map.invalidateSize(); }, 400);
+  }
+
   document.getElementById('languageSelect').addEventListener('change', function() {
     currentLang = this.value;
+    updateStaticTexts();
     renderMarkers();
+    closePanel();
   });
 
-  // Başlangıç yüklemesi
+  document.getElementById('filterOttoman').addEventListener('change', renderMarkers);
+
+  updateStaticTexts();
   renderMarkers();
 </script>
 
