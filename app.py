@@ -41,6 +41,37 @@ async def shutdown():
 
 
 # ---------------- Ana Sayfa ----------------
+# ---------------- Seyahat Albümü ----------------
+@app.get("/album", response_class=HTMLResponse)
+async def album_page(request: Request):
+    # Klasör yollarını belirle
+    base_path = Path("static/images")
+    book1_path = base_path / "book1"
+    book2_path = base_path / "book2"
+
+    # Klasörler yoksa oluştur (hata önlemek için)
+    book1_path.mkdir(parents=True, exist_ok=True)
+    book2_path.mkdir(parents=True, exist_ok=True)
+
+    # Geçerli resim uzantıları
+    valid_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+    # Klasördeki dosyaları listele
+    def get_images(path):
+        return [
+            f"/static/images/{path.name}/{f.name}"
+            for f in path.iterdir()
+            if f.is_file() and f.suffix.lower() in valid_extensions
+        ]
+
+    images_book1 = get_images(book1_path)
+    images_book2 = get_images(book2_path)
+
+    return templates.TemplateResponse("album.html", {
+        "request": request,
+        "book1": images_book1,
+        "book2": images_book2
+    })
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     # Rotanın sırayla çizilmesi için ID'ye göre sıralıyoruz
