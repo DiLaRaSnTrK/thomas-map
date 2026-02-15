@@ -6,7 +6,6 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -16,9 +15,15 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      height: 100vh;
+      background-attachment: fixed; /* Arka plan sabit kalsın, biz üzerinde kayalım */
+      min-height: 100vh; /* Sabit 100vh yerine minimum 100vh yapıyoruz */
       margin: 0;
       overflow-x: hidden;
+      padding-bottom: 80px; /* 👈 İşte aradığın o alt boşluk burada! */
+    }
+
+    .row {
+      margin-top: 20px;
     }
 
     .navbar { background-color: rgba(43, 25, 0, 0.75); }
@@ -118,8 +123,8 @@
       cursor: pointer; 
       color: #4d2c01; 
       font-weight: bold;
-      line-height: 1;
     }
+
   </style>
 </head>
 <body>
@@ -142,21 +147,21 @@
               Seyahat Bilgisi
             </button>
         </li>
+        <li class="nav-item">
+            <a id="album-btn" class="btn btn-outline-light btn-sm ms-3" href="/album" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
+              Seyahat Albümü
+            </a>
+        </li>
+        <li class="nav-item">
+          <a id="admin-login-btn" class="btn btn-outline-light btn-sm ms-3" href="/login" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
+            Admin Girişi
+          </a>
+        </li>
         <li class="nav-item ms-3">
           <select id="languageSelect" class="form-select form-select-sm" style="background-color: #dabc9a; color: #4d2c01; border: none; border-radius: 20px; cursor: pointer;">
             <option value="tr">TR</option>
             <option value="en">EN</option>
           </select>
-        </li>
-        <li class="nav-item">
-        <a class="btn btn-outline-light btn-sm ms-3" href="/album" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
-          Seyahat Albümü
-        </a>
-      </li>
-        <li class="nav-item">
-          <a id="admin-login-btn" class="btn btn-outline-light btn-sm ms-3" href="/login" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
-            Admin Girişi
-          </a>
         </li>
       </ul>
     </div>
@@ -190,7 +195,7 @@
         <span class="modal-close" onclick="closeInfoModal()">&times;</span>
         <div class="row align-items-center">
             <div class="col-md-5 text-center">
-                <img src="/static/images/Logo.png" alt="Kitap Kapağı" style="width: 100%; max-width: 280px; border-radius: 10px; box-shadow: 5px 5px 15px rgba(0,0,0,0.3); border: 2px solid #dabc9a;">
+                <img src="/static/images/Logo.png" alt="Cover" style="width: 100%; max-width: 280px; border-radius: 10px; box-shadow: 5px 5px 15px rgba(0,0,0,0.3); border: 2px solid #dabc9a;">
             </div>
             <div class="col-md-7">
                 <h2 id="modal-title" style="font-family: 'Tangerine', cursive; font-size: 50px; color: #4d2c01; margin-bottom: 20px; border-bottom: 2px double #dabc9a;">Seyahat Hakkında</h2>
@@ -203,7 +208,7 @@
 
 <script>
   const places = {{ places | tojson }};
-  let currentLang = 'tr';
+  let currentLang = localStorage.getItem('stevens_lang') || 'tr';
   let markers = [];
 
   const translations = {
@@ -215,12 +220,13 @@
       filterOther: "Diğer Bölgeler",
       adminLogin: "Admin Girişi",
       infoBtn: "Seyahat Bilgisi",
+      albumBtn: "Seyahat Albümü",
       histName: "Seyahat Tarihi",
       ottomanLabel: "Osmanlı Toprağı",
       transportLabel: "Ulaşım Aracı",
-      yes: "Evet", no: "Hayır",
       infoTitle: "Seyahat Hakkında",
-      infoBody: "Thomas Stevens, 1884-1886 yılları arasında yüksek tekerlekli (penny-farthing) bisikletiyle dünyayı dolaşan ilk insandır. San Francisco'dan başlayan bu destansı yolculukta Stevens; Avrupa, Osmanlı İmparatorluğu, İran ve Hindistan'ı aşarak macerasını tamamlamıştır. Bu harita, onun 'Around the World on a Bicycle' kitabındaki duraklarını ve Osmanlı topraklarındaki rotasını yansıtmaktadır."
+      yes: "Evet", no: "Hayır",
+      infoBody: "Thomas Stevens, 1884-1886 yılları arasında yüksek tekerlekli (penny-farthing) bisikletiyle dünyayı dolaşan ilk insandır. San Francisco'dan başlayan bu destansı yolculukta Stevens; Avrupa, Osmanlı İmparatorluğu, İran ve Hindistan'ı aşarak macerasını tamamlamıştır."
     },
     en: {
       navTitle: "Thomas Stevens' World Tour",
@@ -230,12 +236,13 @@
       filterOther: "Other Regions",
       adminLogin: "Admin Login",
       infoBtn: "Journey Info",
+      albumBtn: "Travel Album",
       histName: "Travel Date",
       ottomanLabel: "Ottoman Land",
       transportLabel: "Transport",
-      yes: "Yes", no: "No",
       infoTitle: "About the Journey",
-      infoBody: "Thomas Stevens was the first person to circle the globe by bicycle (penny-farthing) between 1884 and 1886. Starting from San Francisco, this epic journey led him through Europe, the Ottoman Empire, Persia, and India. This map reflects his route based on his book 'Around the World on a Bicycle', highlighting his passage through Ottoman territories."
+      yes: "Yes", no: "No",
+      infoBody: "Thomas Stevens was the first person to circle the globe by bicycle (penny-farthing) between 1884 and 1886. Starting from San Francisco, Stevens crossed Europe, the Ottoman Empire, Persia, and India to complete his adventure."
     }
   };
 
@@ -248,11 +255,13 @@
     document.getElementById('main-title').innerText = t.mainTitle;
     document.getElementById('admin-login-btn').innerText = t.adminLogin;
     document.getElementById('info-btn').innerText = t.infoBtn;
+    document.getElementById('album-btn').innerText = t.albumBtn;
     
     const filter = document.getElementById('filterOttoman');
     filter.options[0].text = t.filterAll;
     filter.options[1].text = t.filterOttoman;
     filter.options[2].text = t.filterOther;
+    document.getElementById('languageSelect').value = currentLang;
   }
 
   function renderMarkers() {
@@ -282,6 +291,8 @@
 
   function showDetails(place) {
     const t = translations[currentLang];
+    
+    // Reset Markers
     places.forEach(p => {
         if (p.marker) {
             const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
@@ -336,7 +347,6 @@
     setTimeout(() => { map.invalidateSize(); }, 400);
   }
 
-  // Modal Fonksiyonları
   function openInfoModal() {
     const t = translations[currentLang];
     document.getElementById('modal-title').innerText = t.infoTitle;
@@ -344,17 +354,11 @@
     document.getElementById('infoModal').style.display = 'flex';
   }
 
-  function closeInfoModal() {
-    document.getElementById('infoModal').style.display = 'none';
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById('infoModal');
-    if (event.target == modal) { closeInfoModal(); }
-  }
+  function closeInfoModal() { document.getElementById('infoModal').style.display = 'none'; }
 
   document.getElementById('languageSelect').addEventListener('change', function() {
     currentLang = this.value;
+    localStorage.setItem('stevens_lang', currentLang);
     updateStaticTexts();
     renderMarkers();
     closePanel();

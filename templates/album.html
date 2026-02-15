@@ -5,7 +5,6 @@
   <title>Seyahat Albümü - Thomas Stevens</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap" rel="stylesheet">
-  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/css/lightbox.min.css">
 
   <style>
@@ -18,7 +17,6 @@
       margin: 0;
     }
     .navbar { background-color: rgba(43, 25, 0, 0.85); }
-    
     h1 {
       color: #4d2c01;
       font-family: 'Tangerine', cursive;
@@ -27,7 +25,6 @@
       text-align: center;
       margin-top: 20px;
     }
-
     .nav-tabs .nav-link {
         color: #4d2c01;
         font-weight: bold;
@@ -39,7 +36,6 @@
         color: #4d2c01;
         border-radius: 10px 10px 0 0;
     }
-    
     .gallery-container {
         background: rgba(253, 245, 230, 0.95);
         border-radius: 15px;
@@ -49,7 +45,6 @@
         margin-top: 20px;
         margin-bottom: 50px;
     }
-
     .gallery-img {
         width: 100%;
         height: 250px;
@@ -73,15 +68,19 @@
       <div style="width: 50px; height: 50px; overflow: hidden; border-radius: 50%;">
         <img src="/static/images/Logo.png" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
       </div>
-      <span style="font-family: 'Tangerine', cursive; font-size: 35px; margin-left: 12px;">
-        Thomas Stevens
-      </span>
+      <span style="font-family: 'Tangerine', cursive; font-size: 35px; margin-left: 12px;">Thomas Stevens</span>
     </a>
     
     <div class="collapse navbar-collapse justify-content-end">
-      <ul class="navbar-nav">
+      <ul class="navbar-nav align-items-center">
         <li class="nav-item">
-            <a class="btn btn-outline-light btn-sm ms-3" href="/" style="border-color: #dabc9a; color: #dabc9a; border-radius: 20px;">
+            <select id="langAlb" class="form-select form-select-sm" style="background-color: #dabc9a; color: #4d2c01; border: none; border-radius: 20px;">
+                <option value="tr">TR</option>
+                <option value="en">EN</option>
+            </select>
+        </li>
+        <li class="nav-item">
+            <a id="back-btn" class="btn btn-outline-light btn-sm ms-3" href="/" style="border-color: #dabc9a; color: #dabc9a; border-radius: 20px;">
               < Haritaya Dön
             </a>
         </li>
@@ -91,32 +90,31 @@
 </nav>
 
 <div class="container">
-    <h1>Seyahat Albümü</h1>
+    <h1 id="alb-h1">Seyahat Albümü</h1>
 
     <div class="gallery-container">
         <ul class="nav nav-tabs" id="albumTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="book1-tab" data-bs-toggle="tab" data-bs-target="#book1" type="button" role="tab">1. Kitap</button>
+            <li class="nav-item">
+                <button class="nav-link active" id="tab1" data-bs-toggle="tab" data-bs-target="#book1" type="button">1. Kitap</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="book2-tab" data-bs-toggle="tab" data-bs-target="#book2" type="button" role="tab">2. Kitap</button>
+            <li class="nav-item">
+                <button class="nav-link" id="tab2" data-bs-toggle="tab" data-bs-target="#book2" type="button">2. Kitap</button>
             </li>
         </ul>
 
-        <div class="tab-content mt-4" id="albumTabsContent">
-            
+        <div class="tab-content mt-4">
             <div class="tab-pane fade show active" id="book1" role="tabpanel">
                 <div class="row g-4">
                     {% if book1 %}
                         {% for img in book1 %}
                         <div class="col-md-4 col-sm-6">
-                            <a href="{{ img }}" data-lightbox="book1" data-title="1. Kitap Fotoğrafı">
-                                <img src="{{ img }}" class="gallery-img" alt="1. Kitap">
+                            <a href="{{ img }}" data-lightbox="book1" data-title="Book 1 Image">
+                                <img src="{{ img }}" class="gallery-img">
                             </a>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-center text-muted">Henüz bu albümde fotoğraf yok.</p>
+                        <p class="text-center text-muted no-photo-msg">Henüz fotoğraf yok.</p>
                     {% endif %}
                 </div>
             </div>
@@ -126,20 +124,57 @@
                     {% if book2 %}
                         {% for img in book2 %}
                         <div class="col-md-4 col-sm-6">
-                            <a href="{{ img }}" data-lightbox="book2" data-title="2. Kitap Fotoğrafı">
-                                <img src="{{ img }}" class="gallery-img" alt="2. Kitap">
+                            <a href="{{ img }}" data-lightbox="book2" data-title="Book 2 Image">
+                                <img src="{{ img }}" class="gallery-img">
                             </a>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-center text-muted">Henüz bu albümde fotoğraf yok.</p>
+                        <p class="text-center text-muted no-photo-msg">Henüz fotoğraf yok.</p>
                     {% endif %}
                 </div>
             </div>
-
         </div>
     </div>
 </div>
+
+<script>
+    const albTrans = {
+        tr: {
+            title: "Seyahat Albümü",
+            tab1: "1. Kitap",
+            tab2: "2. Kitap",
+            back: "< Haritaya Dön",
+            none: "Henüz bu albümde fotoğraf yok."
+        },
+        en: {
+            title: "Travel Album",
+            tab1: "Book 1",
+            tab2: "Book 2",
+            back: "< Back to Map",
+            none: "No photos in this album yet."
+        }
+    };
+
+    function updateAlbLang(lang) {
+        const t = albTrans[lang];
+        document.getElementById('alb-h1').innerText = t.title;
+        document.getElementById('tab1').innerText = t.tab1;
+        document.getElementById('tab2').innerText = t.tab2;
+        document.getElementById('back-btn').innerText = t.back;
+        document.querySelectorAll('.no-photo-msg').forEach(el => el.innerText = t.none);
+    }
+
+    document.getElementById('langAlb').addEventListener('change', (e) => {
+        updateAlbLang(e.target.value);
+        localStorage.setItem('stevens_lang', e.target.value);
+    });
+
+    // Sayfa yüklendiğinde dili hatırla
+    const savedLang = localStorage.getItem('stevens_lang') || 'tr';
+    document.getElementById('langAlb').value = savedLang;
+    updateAlbLang(savedLang);
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lightbox2/2.11.4/js/lightbox-plus-jquery.min.js"></script>
