@@ -49,8 +49,8 @@
     }
 
     .detail-title {
-      font-family: 'Tangerine', cursive;
-      font-size: 3.5rem;
+      font-family: 'Monotype Corsiva', Tahoma, sans-serif;
+      font-size: 3rem;
       color: #4d2c01;
       border-bottom: 2px double #dabc9a;
       margin-bottom: 15px;
@@ -145,9 +145,7 @@
   const places = {{ places | tojson }};
   let currentLang = 'tr';
   let markers = [];
-  let routePath = null;
 
-  // Dil Sözlüğü
   const translations = {
     tr: {
       navTitle: "Thomas Stevens'ın Dünya Turu",
@@ -156,8 +154,9 @@
       filterOttoman: "Osmanlı Toprakları",
       filterOther: "Diğer Bölgeler",
       adminLogin: "Admin Girişi",
-      histName: "Tarihi Ad",
+      histName: "Seyahat Tarihi",
       ottomanLabel: "Osmanlı Toprağı",
+      transportLabel: "Ulaşım Aracı",
       yes: "Evet", no: "Hayır"
     },
     en: {
@@ -167,8 +166,9 @@
       filterOttoman: "Ottoman Territories",
       filterOther: "Other Regions",
       adminLogin: "Admin Login",
-      histName: "Historic Name",
+      histName: "Travel Date",
       ottomanLabel: "Ottoman Land",
+      transportLabel: "Transport",
       yes: "Yes", no: "No"
     }
   };
@@ -188,7 +188,7 @@
     filter.options[2].text = t.filterOther;
   }
 
- function renderMarkers() {
+  function renderMarkers() {
     markers.forEach(m => map.removeLayer(m));
     markers = [];
 
@@ -210,9 +210,7 @@
 
       const marker = L.marker([place.latitude, place.longitude], { icon: customIcon }).addTo(map);
       place.marker = marker;
-      // Marker'a tıklama olayı
       marker.on('click', () => showDetails(place));
-      
       markers.push(marker);
     });
   }
@@ -220,64 +218,7 @@
   function showDetails(place) {
     const t = translations[currentLang];
 
-    // 1. Önce haritadaki tüm marker'ları standart boyutuna ve rengine döndür
-    places.forEach(p => {
-        if (p.marker) {
-            const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
-            const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
-            
-            p.marker.setIcon(L.divIcon({
-                className: 'custom-marker',
-                html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="42" viewBox="0 0 24 24" fill="${iconColor}" stroke="#dabc9a" stroke-width="2"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
-                iconSize: [28, 42],
-                iconAnchor: [14, 42]
-            }));
-            p.marker.setZIndexOffset(0); // Derinlik önceliğini sıfırla
-        }
-    });
-
-    // 2. Seçilen konumu BÜYÜT ve vurgula
-    if (place.marker) {
-        const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
-        const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
-        
-        place.marker.setIcon(L.divIcon({
-            className: 'custom-marker-active',
-            html: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60" viewBox="0 0 24 24" fill="${iconColor}" stroke="#fedfdf" stroke-width="3"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
-            iconSize: [40, 60], // Standart 28x42'den 40x60'a büyütüldü
-            iconAnchor: [20, 60] // Çapa noktasını yeni boyuta göre ortala
-        }));
-        place.marker.setZIndexOffset(1000); // Diğer marker'ların üstünde kalmasını sağla
-    }
-
-    // 3. Sağ Paneli Aç ve İçeriği Doldur
-    document.getElementById('map-col').classList.replace('col-12', 'col-md-8');
-    document.getElementById('detail-panel').style.display = 'block';
-
-    const desc = currentLang === 'tr' ? (place.description_tr || "") : (place.description_en || "");
-    const ottomanStatus = place.is_in_ottoman ? t.yes : t.no;
-
-    document.getElementById('panel-content').innerHTML = `
-      <h2 class="detail-title">${place.name_modern}</h2>
-      <div class="slider-placeholder">
-        <img src="/static/images/vintage.png" class="slider-img" alt="Visual">
-      </div>
-      <div class="detail-text">
-        <p><strong>${t.histName}:</strong> ${place.name_historic}</p>
-        <p>${desc}</p>
-      </div>
-      <div class="status-badge">${t.ottomanLabel}: ${ottomanStatus}</div>
-    `;
-
-    // Harita boyut değişimini Leaflet'e bildir
-    setTimeout(() => { map.invalidateSize(); }, 400);
-  }
-
-  function closePanel() {
-    document.getElementById('map-col').classList.replace('col-md-8', 'col-12');
-    document.getElementById('detail-panel').style.display = 'none';
-
-    // Tüm marker'ları standart boyuta döndür
+    // Marker Vurgulama Sıfırla
     places.forEach(p => {
         if (p.marker) {
             const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
@@ -292,6 +233,45 @@
         }
     });
 
+    // Tıklananı Büyüt
+    if (place.marker) {
+        const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
+        const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
+        place.marker.setIcon(L.divIcon({
+            className: 'custom-marker-active',
+            html: `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60" viewBox="0 0 24 24" fill="${iconColor}" stroke="#fff" stroke-width="3"><path d="M12 2C8.13401 2 5 5.13401 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.86599-3.13401-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`,
+            iconSize: [40, 60],
+            iconAnchor: [20, 60]
+        }));
+        place.marker.setZIndexOffset(1000);
+    }
+
+    document.getElementById('map-col').classList.replace('col-12', 'col-md-8');
+    document.getElementById('detail-panel').style.display = 'block';
+
+    const desc = currentLang === 'tr' ? (place.description_tr || "") : (place.description_en || "");
+    const ottomanStatus = place.is_in_ottoman ? t.yes : t.no;
+
+    document.getElementById('panel-content').innerHTML = `
+      <h2 class="detail-title">${place.name_modern}</h2>
+      <div class="slider-placeholder">
+        <img src="/static/images/vintage.png" class="slider-img" alt="Visual">
+      </div>
+      <div class="detail-text">
+        <p><strong>${t.histName}:</strong> ${place.name_historic}</p>
+        <p><strong>${t.transportLabel}:</strong> ${place.transport_type || '-'}</p>
+        <p>${desc}</p>
+      </div>
+      <div class="status-badge">${t.ottomanLabel}: ${ottomanStatus}</div>
+    `;
+
+    setTimeout(() => { map.invalidateSize(); }, 400);
+  }
+
+  function closePanel() {
+    document.getElementById('map-col').classList.replace('col-md-8', 'col-12');
+    document.getElementById('detail-panel').style.display = 'none';
+    renderMarkers();
     setTimeout(() => { map.invalidateSize(); }, 400);
   }
 

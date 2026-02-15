@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.future import select
+from sqlalchemy import delete
 from database import SessionLocal, engine, Base, database
 from models import Place
 from auth import create_session, check_login
@@ -11,8 +12,6 @@ from dotenv import load_dotenv
 import pandas as pd
 import os
 from deep_translator import GoogleTranslator
-from sqlalchemy import delete
-
 
 # Ortam değişkenlerini yükle
 load_dotenv()
@@ -44,17 +43,18 @@ async def shutdown():
 # ---------------- Ana Sayfa ----------------
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    # Rotanın sırayla çizilmesi için ID'ye göre sıralıyoruz
     query = select(Place).order_by(Place.id)
     async with SessionLocal() as session:
         result = await session.execute(query)
         places = result.scalars().all()
 
-    # 🔽🔽🔽 BURASI EKLENECEK
     places_json = [
         {
             "id": p.id,
             "name_historic": p.name_historic,
             "name_modern": p.name_modern,
+            "transport_type": p.transport_type, # Ana sayfaya eklendi
             "latitude": p.latitude,
             "longitude": p.longitude,
             "is_in_ottoman": p.is_in_ottoman,
@@ -63,11 +63,10 @@ async def index(request: Request):
         }
         for p in places
     ]
-    # 🔼🔼🔼
 
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "places": places_json,   # 👈 ORM DEĞİL JSON GİDİYOR
+        "places": places_json,
         "google_maps_key": os.getenv("GOOGLE_MAPS_API_KEY")
     })
 
@@ -99,7 +98,7 @@ async def logout():
 # ---------------- Admin Panel ----------------
 @app.get("/admin", response_class=HTMLResponse)
 async def admin(request: Request, user: str = Depends(check_login)):
-    query = select(Place)
+    query = select(Place).order_by(Place.id)
     async with SessionLocal() as session:
         result = await session.execute(query)
         places = result.scalars().all()
@@ -115,6 +114,7 @@ async def add_place(
     request: Request,
     name_historic: str = Form(...),
     name_modern: str = Form(...),
+    transport_type: str = Form(None), # Formdan gelen veri eklendi
     latitude: float = Form(...),
     longitude: float = Form(...),
     is_in_ottoman: bool = Form(False),
@@ -126,6 +126,7 @@ async def add_place(
         place = Place(
             name_historic=name_historic,
             name_modern=name_modern,
+            transport_type=transport_type, # Veritabanına kaydediliyor
             latitude=latitude,
             longitude=longitude,
             is_in_ottoman=is_in_ottoman,
@@ -134,9 +135,8 @@ async def add_place(
         )
         session.add(place)
         await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin?msg=added", status_code=303)
 
-# app.py dosyasına eklenecek yeni rotalar
 
 @app.get("/admin/delete/{place_id}")
 async def delete_place(place_id: int, user: str = Depends(check_login)):
@@ -147,7 +147,8 @@ async def delete_place(place_id: int, user: str = Depends(check_login)):
         if place:
             await session.delete(place)
             await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin?msg=deleted", status_code=303)
+
 
 @app.get("/admin/edit/{place_id}", response_class=HTMLResponse)
 async def edit_page(request: Request, place_id: int, user: str = Depends(check_login)):
@@ -157,15 +158,17 @@ async def edit_page(request: Request, place_id: int, user: str = Depends(check_l
         place = result.scalar_one_or_none()
     return templates.TemplateResponse("edit.html", {"request": request, "place": place})
 
+
 @app.post("/admin/edit/{place_id}")
-async def edit_place(
-    place_id: int,
-    name_historic: str = Form(...),
-    name_modern: str = Form(...),
-    latitude: float = Form(...),
-    longitude: float = Form(...),
-    is_in_ottoman: bool = Form(False),
-    description_tr: str = Form(""),
+async def edit_save(
+    place_id: int, 
+    name_historic: str = Form(...), 
+    name_modern: str = Form(...), 
+    transport_type: str = Form(None), # Düzenleme formuna eklendi
+    latitude: float = Form(...), 
+    longitude: float = Form(...), 
+    is_in_ottoman: bool = Form(False), 
+    description_tr: str = Form(""), 
     description_en: str = Form(""),
     user: str = Depends(check_login)
 ):
@@ -176,139 +179,106 @@ async def edit_place(
         if place:
             place.name_historic = name_historic
             place.name_modern = name_modern
+            place.transport_type = transport_type # Güncelleniyor
             place.latitude = latitude
             place.longitude = longitude
             place.is_in_ottoman = is_in_ottoman
             place.description_tr = description_tr
             place.description_en = description_en
             await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin?msg=updated", status_code=303)
 
-# ---------------- Excel'den Veri Yükleme ----------------
-# --- app.py içindeki load_excel fonksiyonunu bu şekilde güncelleyin ---
-# app.py içindeki ilgili kısımları bu şekilde güncelleyin
+
+# ---------------- Otomatik Çeviri ve Excel ----------------
+
+@app.post("/admin/translate")
+async def translate_text(request: Request):
+    try:
+        data = await request.json()
+        text_to_translate = data.get("text")
+        if not text_to_translate:
+            return {"translated_text": ""}
+        
+        translated = GoogleTranslator(source='tr', target='en').translate(text_to_translate)
+        return {"translated_text": translated}
+    except Exception as e:
+        print(f"Çeviri hatası: {e}")
+        return JSONResponse({"error": "Çeviri yapılamadı", "details": str(e)}, status_code=500)
+
 
 @app.get("/load_excel")
 async def load_excel():
-    # 1. Dosya Kontrolü
-    # Not: Excel dosyanızın adı tam olarak '123.xlsx' olmalı ve 'data' klasöründe bulunmalıdır.
     excel_path = Path("data/123.xlsx")
     if not excel_path.exists():
         return JSONResponse({"error": f"Excel dosyası '{excel_path}' bulunamadı!"}, status_code=404)
 
-    # 2. Excel'i Oku ve Sütunları Standartlaştır
     df = pd.read_excel(excel_path)
-    
-    # Türkçe karakter ve boşluk sorunlarını çözmek için sütun isimlerini temizliyoruz
-    original_cols = df.columns.tolist()
+    # Sütun isimlerini temizle ve küçük harfe çevir
     df.columns = [str(c).strip().lower().replace('ı', 'i').replace('i̇', 'i') for c in df.columns]
 
-    # 3. Çeviri Motorunu Başlat (Türkçe -> İngilizce)
     translator = GoogleTranslator(source='tr', target='en')
 
     async with SessionLocal() as session:
-        # 4. Önce Mevcut Verileri Temizle (Sıfırdan temiz bir yükleme için)
         await session.execute(delete(Place))
         await session.commit()
 
         added = 0
-        # Excel'deki 'NO' sütunu varsa ona göre, yoksa satır sırasına göre yükleme yapar
-        # Bu, haritadaki çizgilerin (polyline) doğru sırayla çizilmesini sağlar.
         for index, row in df.iterrows():
             try:
-                # --- Dinamik Sütun Yakalama ---
-                # Sütun isimleri değişse bile anahtar kelimelerden doğru veriyi bulur
+                # Sütunları anahtar kelimelerle bul
                 lat_col = next((c for c in df.columns if 'enlem' in c or 'lat' in c), None)
                 lon_col = next((c for c in df.columns if 'boylam' in c or 'lon' in c), None)
                 osman_col = next((c for c in df.columns if 'osman' in c), None)
                 hist_col = next((c for c in df.columns if 'tarih' in c), None)
                 mod_col = next((c for c in df.columns if 'lokasyon' in c or 'modern' in c), None)
                 info_col = next((c for c in df.columns if 'bilgi' in c or 'desc' in c), None)
-
-                # Koordinat yoksa bu satırı atla
+                
+                # Sizin Excel'iniz için "araç" veya "kullanılan" kelimelerini kontrol eder
+                vehicle_col = next((c for c in df.columns if 'arac' in c or 'transport' in c or 'kullanilan' in c or 'vasita' in c), None)
+                
                 if not lat_col or not lon_col or pd.isna(row[lat_col]):
                     continue
 
-                # --- Osmanlı Toprağı Kontrolü ---
+                # Veri temizleme
+                transport_val = ""
+                if vehicle_col and not pd.isna(row[vehicle_col]):
+                    transport_val = str(row[vehicle_col]).strip()
+
                 is_ottoman_val = False
                 if osman_col:
                     val = str(row[osman_col]).strip().lower()
-                    # 'Evet', 'True', '1' veya 'Yes' değerlerini yakalar
                     is_ottoman_val = val in ["evet", "true", "1", "yes"]
 
-                # --- Otomatik Çeviri İşlemi ---
                 desc_tr = str(row.get(info_col, "")) if info_col else ""
                 desc_en = ""
                 
                 if desc_tr and desc_tr != "nan" and desc_tr.strip() != "":
                     try:
-                        # Bilgi metnini otomatik olarak İngilizceye çevirir
                         desc_en = translator.translate(desc_tr)
-                    except Exception as e:
-                        print(f"Çeviri hatası (Satır {index}): {e}")
-                        desc_en = "" # Hata olursa boş bırakır
+                    except:
+                        desc_en = ""
 
-                # 5. Veritabanı Nesnesini Oluştur
                 place = Place(
                     name_historic=str(row.get(hist_col, "")) if hist_col else "",
                     name_modern=str(row.get(mod_col, "")) if mod_col else "",
+                    transport_type=transport_val,  # 👈 Excel'den gelen veri buraya yazılıyor
                     latitude=float(row[lat_col]),
                     longitude=float(row[lon_col]),
                     is_in_ottoman=is_ottoman_val,
                     description_tr=desc_tr,
-                    description_en=desc_en  # Otomatik doldurulan İngilizce alan
+                    description_en=desc_en
                 )
                 
                 session.add(place)
                 added += 1
 
             except Exception as e:
-                print(f"Satır {index} işlenirken hata oluştu: {e}")
+                print(f"Hata (Satır {index}): {e}")
                 continue
 
-        # 6. Tüm Değişiklikleri Kaydet
         await session.commit()
 
     return JSONResponse({
         "status": "success",
-        "message": f"Eski veriler temizlendi. {added} yeni kayıt otomatik çevirileriyle birlikte eklendi."
+        "message": f"Eski veriler temizlendi. {added} yeni kayıt yüklendi."
     })
-
-# DÜZENLEME VE SİLME ROTALARI (Admin paneli butonları için)
-@app.get("/admin/delete/{place_id}")
-async def delete_place(place_id: int, user: str = Depends(check_login)):
-    async with SessionLocal() as session:
-        query = select(Place).where(Place.id == place_id)
-        result = await session.execute(query)
-        place = result.scalar_one_or_none()
-        if place:
-            await session.delete(place)
-            await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)
-
-@app.get("/admin/edit/{place_id}", response_class=HTMLResponse)
-async def edit_page(request: Request, place_id: int, user: str = Depends(check_login)):
-    async with SessionLocal() as session:
-        query = select(Place).where(Place.id == place_id)
-        result = await session.execute(query)
-        place = result.scalar_one_or_none()
-    return templates.TemplateResponse("edit.html", {"request": request, "place": place})
-
-@app.post("/admin/edit/{place_id}")
-async def edit_save(place_id: int, name_historic: str = Form(...), name_modern: str = Form(...), 
-                    latitude: float = Form(...), longitude: float = Form(...), 
-                    is_in_ottoman: bool = Form(False), description_tr: str = Form(""), 
-                    user: str = Depends(check_login)):
-    async with SessionLocal() as session:
-        query = select(Place).where(Place.id == place_id)
-        result = await session.execute(query)
-        place = result.scalar_one_or_none()
-        if place:
-            place.name_historic = name_historic
-            place.name_modern = name_modern
-            place.latitude = latitude
-            place.longitude = longitude
-            place.is_in_ottoman = is_in_ottoman
-            place.description_tr = description_tr
-            await session.commit()
-    return RedirectResponse(url="/admin", status_code=303)

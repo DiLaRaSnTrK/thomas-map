@@ -12,3 +12,4 @@ class Place(Base):
     is_in_ottoman = Column(Boolean, default=False)
     description_tr = Column(String, default="")
     description_en = Column(String, default="")
+    transport_type = Column(String, nullable=True) 

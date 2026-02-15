@@ -40,6 +40,12 @@
         table.table thead.table-dark th { background-color: rgba(43,25,0,0.95); color: #dabc9a; }
         .btn-primary { background-color: #dabc9a; color: #2b1900; border: none; border-radius: 15px; }
         .btn-danger { background-color: #c94c4c; border-radius: 15px; border: none; }
+
+        .alert {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
@@ -58,15 +64,21 @@
 </nav>
 
 <div class="container container-box mt-4">
+    <div id="alert-placeholder"></div>
+
     <h2>Yeni Yer Ekle</h2>
     <form method="post" action="/admin/add" class="row g-3 mb-5">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">Konum Adı</label>
             <input type="text" name="name_modern" class="form-control" placeholder="Örn: İstanbul" required>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <label class="form-label">Seyahat Tarihi</label>
             <input type="text" name="name_historic" class="form-control" placeholder="Örn: 02.07.1885" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Ulaşım Aracı</label>
+            <input type="text" name="transport_type" class="form-control" placeholder="Bisiklet, Gemi, Tren...">
         </div>
         
         <div class="col-md-4">
@@ -116,7 +128,7 @@
             <tr>
                 <th>ID</th>
                 <th>Konum Adı</th>
-                <th>Seyahat Tarihi</th>
+                <th>Ulaşım</th>
                 <th>İşlemler</th>
             </tr>
         </thead>
@@ -125,7 +137,7 @@
             <tr>
                 <td>{{ place.id }}</td>
                 <td>{{ place.name_modern }}</td>
-                <td>{{ place.name_historic }}</td>
+                <td>{{ place.transport_type or '-' }}</td>
                 <td>
                     <a class="btn btn-primary btn-sm me-2" href="/admin/edit/{{ place.id }}">Düzenle</a>
                     <a class="btn btn-danger btn-sm" href="/admin/delete/{{ place.id }}">Sil</a>
@@ -137,6 +149,35 @@
 </div>
 
 <script>
+const urlParams = new URLSearchParams(window.location.search);
+const msg = urlParams.get('msg');
+
+if (msg) {
+    const placeholder = document.getElementById('alert-placeholder');
+    let text = "";
+    let type = "alert-success";
+
+    if (msg === "added") text = "✅ Yeni konum başarıyla eklendi!";
+    if (msg === "updated") text = "📝 Kayıt başarıyla güncellendi!";
+    if (msg === "deleted") { text = "🗑️ Kayıt silindi."; type = "alert-warning"; }
+
+    placeholder.innerHTML = `
+        <div class="alert ${type} alert-dismissible fade show" role="alert">
+            ${text}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+
+    setTimeout(() => {
+        const alert = document.querySelector('.alert');
+        if (alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }
+        window.history.replaceState({}, document.title, "/admin");
+    }, 3000);
+}
+
 async function autoTranslate() {
     const text = document.getElementById('desc_tr').value;
     if(!text) { alert("Lütfen önce Türkçe açıklamayı girin!"); return; }

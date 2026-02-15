@@ -37,13 +37,17 @@
         <h2 class="mb-4">Yeri Düzenle: {{ place.name_modern }}</h2>
         <form method="post">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">Konum Adı (Modern)</label>
                     <input type="text" name="name_modern" class="form-control" value="{{ place.name_modern }}" required>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">Seyahat Tarihi</label>
                     <input type="text" name="name_historic" class="form-control" value="{{ place.name_historic }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Ulaşım Aracı</label>
+                    <input type="text" name="transport_type" class="form-control" value="{{ place.transport_type or '' }}" placeholder="Bisiklet, Gemi, Tren...">
                 </div>
                 
                 <div class="col-md-4">
