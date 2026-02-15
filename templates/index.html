@@ -86,6 +86,40 @@
       margin-top: 15px;
     }
     .close-btn { cursor: pointer; float: right; font-size: 1.5rem; color: #4d2c01; }
+
+    /* Modal Stilleri */
+    #infoModal {
+      display:none; 
+      position: fixed; 
+      z-index: 9999; 
+      left: 0; 
+      top: 0; 
+      width: 100%; 
+      height: 100%; 
+      background-color: rgba(0,0,0,0.8); 
+      align-items: center; 
+      justify-content: center;
+    }
+    .modal-content-custom {
+      background: #fdf5e6; 
+      width: 85%; 
+      max-width: 900px; 
+      border-radius: 20px; 
+      border: 4px solid #dabc9a; 
+      position: relative; 
+      padding: 40px; 
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+    .modal-close {
+      position: absolute; 
+      right: 20px; 
+      top: 10px; 
+      font-size: 35px; 
+      cursor: pointer; 
+      color: #4d2c01; 
+      font-weight: bold;
+      line-height: 1;
+    }
   </style>
 </head>
 <body>
@@ -103,6 +137,11 @@
 
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <ul class="navbar-nav align-items-center">
+        <li class="nav-item">
+            <button id="info-btn" class="btn btn-outline-light btn-sm ms-3" onclick="openInfoModal()" style="border-color: #dabc9a; color: #dabc9a; font-weight: 500; border-radius: 20px;">
+              Seyahat Bilgisi
+            </button>
+        </li>
         <li class="nav-item ms-3">
           <select id="languageSelect" class="form-select form-select-sm" style="background-color: #dabc9a; color: #4d2c01; border: none; border-radius: 20px; cursor: pointer;">
             <option value="tr">TR</option>
@@ -141,6 +180,22 @@
   </div>
 </div>
 
+<div id="infoModal">
+    <div class="modal-content-custom">
+        <span class="modal-close" onclick="closeInfoModal()">&times;</span>
+        <div class="row align-items-center">
+            <div class="col-md-5 text-center">
+                <img src="/static/images/Logo.png" alt="Kitap Kapağı" style="width: 100%; max-width: 280px; border-radius: 10px; box-shadow: 5px 5px 15px rgba(0,0,0,0.3); border: 2px solid #dabc9a;">
+            </div>
+            <div class="col-md-7">
+                <h2 id="modal-title" style="font-family: 'Tangerine', cursive; font-size: 50px; color: #4d2c01; margin-bottom: 20px; border-bottom: 2px double #dabc9a;">Seyahat Hakkında</h2>
+                <div id="modal-text" class="detail-text" style="font-size: 1.1rem; color: #333; max-height: 350px; overflow-y: auto; padding-right: 10px;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
   const places = {{ places | tojson }};
   let currentLang = 'tr';
@@ -154,10 +209,13 @@
       filterOttoman: "Osmanlı Toprakları",
       filterOther: "Diğer Bölgeler",
       adminLogin: "Admin Girişi",
+      infoBtn: "Seyahat Bilgisi",
       histName: "Seyahat Tarihi",
       ottomanLabel: "Osmanlı Toprağı",
       transportLabel: "Ulaşım Aracı",
-      yes: "Evet", no: "Hayır"
+      yes: "Evet", no: "Hayır",
+      infoTitle: "Seyahat Hakkında",
+      infoBody: "Thomas Stevens, 1884-1886 yılları arasında yüksek tekerlekli (penny-farthing) bisikletiyle dünyayı dolaşan ilk insandır. San Francisco'dan başlayan bu destansı yolculukta Stevens; Avrupa, Osmanlı İmparatorluğu, İran ve Hindistan'ı aşarak macerasını tamamlamıştır. Bu harita, onun 'Around the World on a Bicycle' kitabındaki duraklarını ve Osmanlı topraklarındaki rotasını yansıtmaktadır."
     },
     en: {
       navTitle: "Thomas Stevens' World Tour",
@@ -166,10 +224,13 @@
       filterOttoman: "Ottoman Territories",
       filterOther: "Other Regions",
       adminLogin: "Admin Login",
+      infoBtn: "Journey Info",
       histName: "Travel Date",
       ottomanLabel: "Ottoman Land",
       transportLabel: "Transport",
-      yes: "Yes", no: "No"
+      yes: "Yes", no: "No",
+      infoTitle: "About the Journey",
+      infoBody: "Thomas Stevens was the first person to circle the globe by bicycle (penny-farthing) between 1884 and 1886. Starting from San Francisco, this epic journey led him through Europe, the Ottoman Empire, Persia, and India. This map reflects his route based on his book 'Around the World on a Bicycle', highlighting his passage through Ottoman territories."
     }
   };
 
@@ -181,6 +242,7 @@
     document.getElementById('nav-title').innerText = t.navTitle;
     document.getElementById('main-title').innerText = t.mainTitle;
     document.getElementById('admin-login-btn').innerText = t.adminLogin;
+    document.getElementById('info-btn').innerText = t.infoBtn;
     
     const filter = document.getElementById('filterOttoman');
     filter.options[0].text = t.filterAll;
@@ -191,12 +253,10 @@
   function renderMarkers() {
     markers.forEach(m => map.removeLayer(m));
     markers = [];
-
     const filterValue = document.getElementById('filterOttoman').value;
 
     places.forEach(place => {
       const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
-      
       if (filterValue === 'yes' && !isOttoman) return;
       if (filterValue === 'no' && isOttoman) return;
 
@@ -217,8 +277,6 @@
 
   function showDetails(place) {
     const t = translations[currentLang];
-
-    // Marker Vurgulama Sıfırla
     places.forEach(p => {
         if (p.marker) {
             const isOttoman = (p.is_in_ottoman === true || p.is_in_ottoman === 1);
@@ -233,7 +291,6 @@
         }
     });
 
-    // Tıklananı Büyüt
     if (place.marker) {
         const isOttoman = (place.is_in_ottoman === true || place.is_in_ottoman === 1);
         const iconColor = isOttoman ? '#4d2c01' : '#a84a32';
@@ -264,7 +321,6 @@
       </div>
       <div class="status-badge">${t.ottomanLabel}: ${ottomanStatus}</div>
     `;
-
     setTimeout(() => { map.invalidateSize(); }, 400);
   }
 
@@ -273,6 +329,23 @@
     document.getElementById('detail-panel').style.display = 'none';
     renderMarkers();
     setTimeout(() => { map.invalidateSize(); }, 400);
+  }
+
+  // Modal Fonksiyonları
+  function openInfoModal() {
+    const t = translations[currentLang];
+    document.getElementById('modal-title').innerText = t.infoTitle;
+    document.getElementById('modal-text').innerText = t.infoBody;
+    document.getElementById('infoModal').style.display = 'flex';
+  }
+
+  function closeInfoModal() {
+    document.getElementById('infoModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('infoModal');
+    if (event.target == modal) { closeInfoModal(); }
   }
 
   document.getElementById('languageSelect').addEventListener('change', function() {
